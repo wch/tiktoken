@@ -112,9 +112,8 @@ jobs:
           export SHA_SHORT=$(git rev-parse --short HEAD)
           git checkout -B pyodide-wheel
           pwd
-          touch dist/foo.txt
-          echo "foo" > dist/foo.txt
-          git add -f dist
+          echo "foo" > foo.txt
+          git add foo.txt
           git commit -m"Build pyodide wheel for $SHA_SHORT"
           git log -n 4 --pretty=oneline --simplify-by-decoration
           git push -f origin pyodide-wheel:pyodide-wheel
