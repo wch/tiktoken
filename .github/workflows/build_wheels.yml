@@ -89,6 +89,12 @@ jobs:
   build_pyodide:
     runs-on: ubuntu-22.04
     steps:
+      - name: Print info
+        shell: bash
+        run: |
+          echo "github.ref: ${{ github.ref }}"
+          echo "github.event_name: ${{ github.event_name }}"
+
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -112,7 +118,7 @@ jobs:
       # Commit wheel file to pyodide-wheel branch
       # =====================================================
       - name: Push to pyodide-wheel branch
-        if: github.ref == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
+        # if: github.ref == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
         shell: bash
         run: |
           git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
