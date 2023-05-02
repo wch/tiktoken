@@ -111,6 +111,8 @@ jobs:
           git config user.email "actions@github.com"
           export SHA_SHORT=$(git rev-parse --short HEAD)
           git checkout -B pyodide-wheel
+          pwd
+          touch dist/foo.txt
           echo "foo" > dist/foo.txt
           git add -f dist
           git commit -m"Build pyodide wheel for $SHA_SHORT"
