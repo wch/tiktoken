@@ -95,37 +95,58 @@ jobs:
           echo "github.ref: ${{ github.ref }}"
           echo "github.event_name: ${{ github.event_name }}"
 
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.10.11
-      - run: |
-          pip install pyodide-build==0.22.1
-          echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
-      - name: Install rustc toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: nightly
-            default: true
-            target: wasm32-unknown-emscripten
-      - uses: mymindstorm/setup-emsdk@v12
-        with:
-          version: ${{ env.EMSCRIPTEN_VERSION }}
-          actions-cache-folder: 'emsdk-cache'
-      - run: pyodide build
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >>$GITHUB_OUTPUT
+        id: branch_name
 
-      # =====================================================
-      # Commit wheel file to pyodide-wheel branch
-      # =====================================================
+
       - name: Push to pyodide-wheel branch
-        # if: github.ref == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
+        if: steps.branch_name.outputs.branch == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
         shell: bash
         run: |
-          git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-          git config --global user.email "username@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           export SHA_SHORT=$(git rev-parse --short HEAD)
           git checkout -B pyodide-wheel
+          echo "foo" > dist/foo.txt
           git add -f dist
           git commit -m"Build pyodide wheel for $SHA_SHORT"
           git log -n 4 --pretty=oneline --simplify-by-decoration
           git push -f origin pyodide-wheel:pyodide-wheel
+
+
+      # - uses: actions/checkout@v3
+      # - uses: actions/setup-python@v4
+      #   with:
+      #     python-version: 3.10.11
+      # - run: |
+      #     pip install pyodide-build==0.22.1
+      #     echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
+      # - name: Install rustc toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #       toolchain: nightly
+      #       default: true
+      #       target: wasm32-unknown-emscripten
+      # - uses: mymindstorm/setup-emsdk@v12
+      #   with:
+      #     version: ${{ env.EMSCRIPTEN_VERSION }}
+      #     actions-cache-folder: 'emsdk-cache'
+      # - run: pyodide build
+
+      # # =====================================================
+      # # Commit wheel file to pyodide-wheel branch
+      # # =====================================================
+      # - name: Push to pyodide-wheel branch
+      #   # if: github.ref == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
+      #   shell: bash
+      #   run: |
+      #     git config user.name "GitHub Actions"
+      #     git config user.email "actions@github.com"
+      #     export SHA_SHORT=$(git rev-parse --short HEAD)
+      #     git checkout -B pyodide-wheel
+      #     git add -f dist
+      #     git commit -m"Build pyodide wheel for $SHA_SHORT"
+      #     git log -n 4 --pretty=oneline --simplify-by-decoration
+      #     git push -f origin pyodide-wheel:pyodide-wheel
