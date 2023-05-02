@@ -89,16 +89,17 @@ jobs:
   build_pyodide:
     runs-on: ubuntu-22.04
     steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >>$GITHUB_OUTPUT
+        id: branch_name
+
       - name: Print info
         shell: bash
         run: |
           echo "github.ref: ${{ github.ref }}"
           echo "github.event_name: ${{ github.event_name }}"
-
-      - name: Extract branch name
-        shell: bash
-        run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >>$GITHUB_OUTPUT
-        id: branch_name
+          echo "steps.branch_name.outputs.branch: ${{ steps.branch_name.outputs.branch }}"
 
 
       - name: Push to pyodide-wheel branch
