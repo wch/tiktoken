@@ -99,8 +99,8 @@ jobs:
         run: |
           echo "github.ref: ${{ github.ref }}"
           echo "github.event_name: ${{ github.event_name }}"
+          echo "github.head_ref: ${{ github.head_ref }}"
           echo "steps.branch_name.outputs.branch: ${{ steps.branch_name.outputs.branch }}"
-
 
       - name: Push to pyodide-wheel branch
         if: steps.branch_name.outputs.branch == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
