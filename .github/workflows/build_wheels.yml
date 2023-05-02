@@ -112,7 +112,7 @@ jobs:
       # Commit wheel file to pyodide-wheel branch
       # =====================================================
       - name: Push to pyodide-wheel branch
-        if: github.ref == 'refs/heads/pyodide-build' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
         shell: bash
         run: |
           git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
