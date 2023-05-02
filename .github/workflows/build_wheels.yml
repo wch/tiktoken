@@ -1,83 +1,127 @@
 name: Build wheels
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  build_wheels:
-    name: py${{ matrix.python-version }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # cibuildwheel builds linux wheels inside a manylinux container
-        # it also takes care of procuring the correct python version for us
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [38, 39, 310, 311]
+  # build_wheels:
+  #   name: py${{ matrix.python-version }} on ${{ matrix.os }}
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       # cibuildwheel builds linux wheels inside a manylinux container
+  #       # it also takes care of procuring the correct python version for us
+  #       os: [ubuntu-latest, windows-latest, macos-latest]
+  #       python-version: [38, 39, 310, 311]
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - uses: pypa/cibuildwheel@v2.11.3
-        env:
-          CIBW_BUILD: "cp${{ matrix.python-version}}-*"
+  #     - uses: pypa/cibuildwheel@v2.11.3
+  #       env:
+  #         CIBW_BUILD: "cp${{ matrix.python-version}}-*"
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: ./wheelhouse/*.whl
+  #     - uses: actions/upload-artifact@v3
+  #       with:
+  #         name: dist
+  #         path: ./wheelhouse/*.whl
 
-  build_wheels_aarch64:
-    name: py${{ matrix.python-version }} on ${{ matrix.os }} (aarch64)
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        python-version: [38, 39, 310, 311]
+  # build_wheels_aarch64:
+  #   name: py${{ matrix.python-version }} on ${{ matrix.os }} (aarch64)
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [ubuntu-latest]
+  #       python-version: [38, 39, 310, 311]
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Setup up QEMU
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: arm64
+  #     - name: Setup up QEMU
+  #       uses: docker/setup-qemu-action@v2
+  #       with:
+  #         platforms: arm64
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.3
-        env:
-          CIBW_BUILD: "cp${{ matrix.python-version}}-*"
-          CIBW_ARCHS: aarch64
-          CIBW_BUILD_VERBOSITY: 3
-          # https://github.com/rust-lang/cargo/issues/10583
-          CIBW_ENVIRONMENT_LINUX: PATH="$PATH:$HOME/.cargo/bin" CARGO_NET_GIT_FETCH_WITH_CLI=true
-      - uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: ./wheelhouse/*.whl
+  #     - name: Build wheels
+  #       uses: pypa/cibuildwheel@v2.11.3
+  #       env:
+  #         CIBW_BUILD: "cp${{ matrix.python-version}}-*"
+  #         CIBW_ARCHS: aarch64
+  #         CIBW_BUILD_VERBOSITY: 3
+  #         # https://github.com/rust-lang/cargo/issues/10583
+  #         CIBW_ENVIRONMENT_LINUX: PATH="$PATH:$HOME/.cargo/bin" CARGO_NET_GIT_FETCH_WITH_CLI=true
+  #     - uses: actions/upload-artifact@v3
+  #       with:
+  #         name: dist
+  #         path: ./wheelhouse/*.whl
 
-  build_sdist:
-    name: sdist
-    runs-on: ubuntu-latest
+  # build_sdist:
+  #   name: sdist
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions/setup-python@v4
+  #       name: Install Python
+  #       with:
+  #         python-version: "3.9"
+  #     - name: Run check-manifest
+  #       run: |
+  #         pip install check-manifest
+  #         check-manifest -v
+  #     - name: Build sdist
+  #       run: |
+  #         pip install --upgrade build
+  #         python -m build --sdist
+  #     - uses: actions/upload-artifact@v3
+  #       with:
+  #         name: dist
+  #         path: ./dist/*.tar.gz
+
+  build_pyodide:
+    runs-on: ubuntu-22.04
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
-        name: Install Python
         with:
-          python-version: "3.9"
-      - name: Run check-manifest
-        run: |
-          pip install check-manifest
-          check-manifest -v
-      - name: Build sdist
-        run: |
-          pip install --upgrade build
-          python -m build --sdist
-      - uses: actions/upload-artifact@v3
+          python-version: 3.10.11
+      - run: |
+          pip install pyodide-build==0.22.1
+          echo EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version) >> $GITHUB_ENV
+      - name: Install rustc toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          name: dist
-          path: ./dist/*.tar.gz
+            toolchain: nightly
+            default: true
+            target: wasm32-unknown-emscripten
+      - uses: mymindstorm/setup-emsdk@v12
+        with:
+          version: ${{ env.EMSCRIPTEN_VERSION }}
+          actions-cache-folder: 'emsdk-cache'
+      - run: pyodide build
+
+      - name: Push to pyodide-wheel branch
+        if: github.head_ref == 'pyodide-build' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          export SHA_SHORT=$(git rev-parse --short HEAD)
+          git checkout -B pyodide-wheel
+          git add -f dist
+          git commit -m"Build pyodide wheel for $SHA_SHORT"
+          git log -n 4 --pretty=oneline --simplify-by-decoration
+          git push -f origin pyodide-wheel:pyodide-wheel
