@@ -103,7 +103,7 @@ jobs:
           echo "steps.branch_name.outputs.branch: ${{ steps.branch_name.outputs.branch }}"
 
       - name: Push to pyodide-wheel branch
-        if: steps.branch_name.outputs.branch == 'refs/heads/pyodide-build' && github.event_name == 'pull_request'
+        if: github.head_ref == 'pyodide-build' && github.event_name == 'pull_request'
         shell: bash
         run: |
           git config user.name "GitHub Actions"
